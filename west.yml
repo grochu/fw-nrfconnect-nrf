@@ -21,7 +21,7 @@ manifest:
     # nRF Connect SDK GitHub organization.
     # NCS repositories are hosted here.
     - name: ncs
-      url-base: https://github.com/nrfconnect
+      url-base: https://github.com/grochu
     # Third-party repository sources:
     - name: zephyrproject
       url-base: https://github.com/zephyrproject-rtos
@@ -49,8 +49,8 @@ manifest:
     # https://developer.nordicsemi.com/nRF_Connect_SDK/doc/latest/zephyr/introduction/index.html
     # https://developer.nordicsemi.com/nRF_Connect_SDK/doc/latest/zephyr/guides/modules.html
     - name: zephyr
-      repo-path: sdk-zephyr
-      revision: 3420cde0e37be536cda67f293784dcc1c6a92001
+      repo-path: fw-nrfconnect-zephyr
+      revision: e46b31738c03db0967250a12d59db282776b8a5a
       import:
         # In addition to the zephyr repository itself, NCS also
         # imports the contents of zephyr/west.yml at the above
@@ -93,7 +93,7 @@ manifest:
     # Some of these are also Zephyr modules which have NCS-specific
     # changes.
     - name: mcuboot
-      repo-path: sdk-mcuboot
+      repo-path: fw-nrfconnect-mcuboot
       revision: b95e49304a9ee82f83668d51c1d95c6f2faaf983
       path: bootloader/mcuboot
     - name: mcumgr
@@ -101,7 +101,7 @@ manifest:
       revision: b18c7b8e3f1fbfc99e0f02102a9d8e3b60304959
       path: modules/lib/mcumgr
     - name: nrfxlib
-      repo-path: sdk-nrfxlib
+      repo-path: nrfxlib
       path: nrfxlib
       revision: 27ce80161f50254dc07caeb1118a7cbe6b121ce8
     # Other third-party repositories.
