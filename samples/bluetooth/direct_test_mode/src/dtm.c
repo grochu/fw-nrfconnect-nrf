@@ -690,6 +690,11 @@ int clock_init(void)
 	/** Keep radio domain powered all the time to reduce latency. */
 	nrf_lrcconf_poweron_force_set(NRF_LRCCONF010, NRF_LRCCONF_POWER_DOMAIN_1, true);
 
+	/** Enble constant latency mode for debugging */
+	nrf_lrcconf_task_trigger(NRF_LRCCONF010, NRF_LRCCONF_TASK_CONSTLAT_ENABLE);
+	printk("constant latency mode %s\n",
+		nrf_lrcconf_constlatstat_check(NRF_LRCCONF010) ? "on" : "off");
+
 	sys_notify_init_spinwait(&radio_cli.notify);
 
 	err = nrf_clock_control_request(radio_clk_dev, NULL, &radio_cli);
