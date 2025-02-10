@@ -27,6 +27,8 @@
 #if CONFIG_FEM
 #include "fem_al/fem_al.h"
 #endif /* CONFIG_FEM */
+#include <zephyr/devicetree.h>
+#include <zephyr/drivers/gpio.h>
 
 /* IEEE 802.15.4 default frequency. */
 #define IEEE_DEFAULT_FREQ         (5)
@@ -116,6 +118,9 @@ static void (**rx_timeout_cb)(void);
 #if CONFIG_FEM
 static struct radio_test_fem fem;
 #endif /* CONFIG_FEM */
+
+/* Debug pin for signalling PACKETPTR register modification */
+static const struct gpio_dt_spec rt_packetptr_change = GPIO_DT_SPEC_GET(DT_NODELABEL(rt_packetptr_change), gpios);
 
 static uint16_t channel_to_frequency(nrf_radio_mode_t mode, uint8_t channel)
 {
@@ -682,6 +687,7 @@ static void generate_modulated_rf_packet(uint8_t mode,
 	}
 
 	nrf_radio_packetptr_set(NRF_RADIO, tx_packet);
+	gpio_pin_toggle_dt(&rt_packetptr_change);
 }
 
 static void radio_disable(void)
@@ -842,6 +848,7 @@ static void radio_rx(uint8_t mode, uint8_t channel, enum transmit_pattern patter
 				NRF_RADIO_SHORT_READY_START_MASK |
 				NRF_RADIO_SHORT_END_START_MASK);
 	nrf_radio_packetptr_set(NRF_RADIO, rx_packet);
+	gpio_pin_toggle_dt(&rt_packetptr_change);
 
 	radio_config(mode, pattern);
 	radio_channel_set(mode, channel);
@@ -1166,6 +1173,8 @@ int radio_test_init(struct radio_test_config *config)
 	}
 
 	rx_timeout_cb = &config->params.rx.cb;
+
+	gpio_pin_configure_dt(&rt_packetptr_change, GPIO_OUTPUT_INACTIVE);
 
 #if CONFIG_FEM
 	int err = fem_init(timer.p_reg,

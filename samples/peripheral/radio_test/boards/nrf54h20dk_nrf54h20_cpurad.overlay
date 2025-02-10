@@ -35,3 +35,21 @@ cpurad_dma_region_alt: &cpuapp_dma_region {
 	source-channels = < 0 1 >;
 	sink-channels = < 2 3 >;
 };
+
+&gpio0 {
+	status = "okay";
+};
+
+&gpiote130 {
+	status = "okay";
+};
+
+/{
+	rt_gpio {
+		compatible = "gpio-leds";
+		rt_packetptr_change: rt-packetptr-change {
+			gpios = <&gpio0 7 GPIO_ACTIVE_LOW>;
+			label = "change packetptr Radio register";
+		};
+	};
+};
