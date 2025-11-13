@@ -33,6 +33,9 @@
 #include <zephyr/drivers/mbox.h>
 #endif /* NRF54H_ERRATA_216_PRESENT */
 
+/* Added for using LED */
+#include <dk_buttons_and_leds.h>
+
 /* IEEE 802.15.4 default frequency. */
 #define IEEE_DEFAULT_FREQ         (5)
 /* Length on air of the LENGTH field. */
@@ -88,6 +91,9 @@
 /* RX timeout counted from the last packet received. */
 #define RX_PACKET_TIMEOUT_MS 100
 
+/* LED for showing the link status in case of continuous RX test */
+#define LINK_STATUS_LED DK_LED1
+
 /* Buffer for the radio TX packet */
 static uint8_t tx_packet[RADIO_MAX_PAYLOAD_LEN];
 /* Buffer for the radio RX packet. */
@@ -96,6 +102,8 @@ static uint8_t rx_packet[RADIO_MAX_PAYLOAD_LEN];
 static uint32_t tx_packet_cnt;
 /* Number of received packets with valid CRC. */
 static uint32_t rx_packet_cnt;
+/* Number of packets with wrong CRC. */
+static uint32_t rx_fail_cnt;
 
 /* Radio current channel (frequency). */
 static uint8_t current_channel;
@@ -942,8 +950,9 @@ static void radio_rx(uint8_t mode, uint8_t channel, enum transmit_pattern patter
 	radio_channel_set(mode, channel);
 
 	rx_packet_cnt = 0;
+	rx_fail_cnt   = 0;
 
-	nrf_radio_int_enable(NRF_RADIO, NRF_RADIO_INT_CRCOK_MASK);
+	nrf_radio_int_enable(NRF_RADIO, NRF_RADIO_INT_CRCOK_MASK | NRF_RADIO_INT_CRCERROR_MASK);
 
 #if CONFIG_FEM
 	(void)fem_configure(true, mode, &fem);
@@ -1186,6 +1195,7 @@ static void rx_timeout_work_handler(struct k_work *work)
 	if (rx_timeout_cb != NULL && *rx_timeout_cb != NULL) {
 		(*rx_timeout_cb)();
 	}
+	dk_set_led_off(LINK_STATUS_LED);
 }
 
 static void timer_handler(nrf_timer_event_t event_type, void *context)
@@ -1271,6 +1281,12 @@ void radio_handler(const void *context)
 	const struct radio_test_config *config =
 		(const struct radio_test_config *) context;
 
+	if (nrf_radio_int_enable_check(NRF_RADIO, NRF_RADIO_INT_CRCERROR_MASK) &&
+		nrf_radio_event_check(NRF_RADIO, NRF_RADIO_EVENT_CRCERROR)) {
+		nrf_radio_event_clear(NRF_RADIO, NRF_RADIO_EVENT_CRCERROR);
+		rx_fail_cnt++;
+	}
+
 	if (nrf_radio_int_enable_check(NRF_RADIO, NRF_RADIO_INT_CRCOK_MASK) &&
 	    nrf_radio_event_check(NRF_RADIO, NRF_RADIO_EVENT_CRCOK)) {
 		nrf_radio_event_clear(NRF_RADIO, NRF_RADIO_EVENT_CRCOK);
@@ -1281,6 +1297,15 @@ void radio_handler(const void *context)
 			} else {
 				k_work_reschedule(&rx_timeout_work, K_MSEC(RX_PACKET_TIMEOUT_MS));
 			}
+		}
+		else {
+			if (rx_packet_cnt == 1) {
+				dk_set_led_on(LINK_STATUS_LED);
+			}
+			if ((rx_fail_cnt * 10) > (rx_packet_cnt + rx_fail_cnt)) {
+				dk_set_led_off(LINK_STATUS_LED);
+			}
+			k_work_reschedule(&rx_timeout_work, K_MSEC(RX_PACKET_TIMEOUT_MS));
 		}
 	}
 
@@ -1326,6 +1351,12 @@ int radio_test_init(struct radio_test_config *config)
 		return err;
 	}
 #endif /* CONFIG_FEM */
+
+	int err = dk_leds_init();
+	if (err) {
+		printk("Failed to initialize LEDS (err %d)\n", err);
+		return 0;
+	}
 
 	return 0;
 }
